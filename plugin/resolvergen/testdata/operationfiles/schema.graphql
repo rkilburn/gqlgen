@@ -1,0 +1,16 @@
+type Query {
+    customer: Customer!
+}
+
+type Mutation {
+    createOrder: Customer!
+    cancelOrder: Customer!
+}
+
+type Subscription {
+    orderSent: Customer!
+}
+
+type Customer {
+    name: String!
+}

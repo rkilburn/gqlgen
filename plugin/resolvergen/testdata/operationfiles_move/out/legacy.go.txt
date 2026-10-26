@@ -1,0 +1,11 @@
+package customresolver
+
+import (
+	"context"
+	"strings"
+)
+
+// Shout is the resolver for the shout field.
+func (r *mutationCustomResolverType) Shout(ctx context.Context) (string, error) {
+	return strings.ToUpper("hello"), nil
+}

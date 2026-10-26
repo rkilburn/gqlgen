@@ -58,6 +58,12 @@ resolver:
   dir: graph
   filename_template: "{name}.resolvers.go"
 
+  # Optional, follow-schema only: give each field of Mutation or Subscription a file of its own.
+  # {field} is the snake_case field name and {name} the schema file's name. The other resolvers
+  # still follow their schema file.
+  # mutation_filename_template: "{field}_mutation.go"           # create_order_mutation.go
+  # subscription_filename_template: "{field}_subscription.go"   # order_sent_subscription.go
+
   # Optional: turn on to not generate template comments above resolvers
   # omit_template_comment: false
   # Optional: Pass in a path to a new gotpl template to use for generating resolvers

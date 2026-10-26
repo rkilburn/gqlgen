@@ -127,6 +127,14 @@
         "omit_template_comment": { "type": "boolean" },
         "resolver_template": { "type": "string" },
         "preserve_resolver": { "type": "boolean" },
+        "mutation_filename_template": {
+          "description": "Only for follow-schema layout. Gives each field of the Mutation type a file of its own instead of the file for its schema file. {field} is the snake_case field name (required) and {name} the schema file's name, e.g. \"{field}_mutation.go\".",
+          "type": "string"
+        },
+        "subscription_filename_template": {
+          "description": "Only for follow-schema layout. Gives each field of the Subscription type a file of its own, like mutation_filename_template, e.g. \"{field}_subscription.go\".",
+          "type": "string"
+        },
         "omit_resolver_embedding": {
           "description": "Declare the per-object resolver types with a named \"r\" field instead of embedding the root resolver. Speeds up compilation on large schemas. Source-breaking for existing resolver bodies: dependencies become r.r.myService instead of r.myService.",
           "type": "boolean",

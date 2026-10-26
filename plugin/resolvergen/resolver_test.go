@@ -151,6 +151,72 @@ func TestLayoutFollowSchemaWithCustomFilename(t *testing.T) {
 	require.Contains(t, source, "// AUserHelperFunction implementation")
 }
 
+func TestLayoutFollowSchemaWithOperationFilenames(t *testing.T) {
+	testFollowSchemaPersistence(t, "testdata/operationfiles")
+	const dir = "testdata/operationfiles/out/"
+
+	// Each mutation and subscription gets a file; everything else follows the schema file.
+	for file, wants := range map[string][]string{
+		"create_order_mutation.go":   {") CreateOrder(ctx"},
+		"cancel_order_mutation.go":   {") CancelOrder(ctx"},
+		"order_sent_subscription.go": {") OrderSent(ctx"},
+		"schema.resolvers.go": {
+			") Customer(ctx", ") Name(ctx",
+			") Query() QueryResolver", ") Mutation() MutationResolver",
+			") Subscription() SubscriptionResolver",
+		},
+	} {
+		b, err := os.ReadFile(dir + file)
+		require.NoError(t, err, file)
+		for _, want := range wants {
+			require.Contains(t, string(b), want, file)
+		}
+	}
+	b, err := os.ReadFile(dir + "schema.resolvers.go")
+	require.NoError(t, err)
+	require.NotContains(t, string(b), ") CreateOrder(ctx")
+	require.NotContains(t, string(b), ") OrderSent(ctx")
+}
+
+func TestLayoutFollowSchemaMovesImportsWithMutation(t *testing.T) {
+	const dir = "testdata/operationfiles_move/out/"
+	// Start from the layout without the option: the implementation lives in a file that is the
+	// only place importing strings.
+	_ = syscall.Unlink(dir + "shout_mutation.go")
+	overWriteFile(t, dir+"legacy.go.txt", dir+"legacy.go")
+
+	cfg, err := config.LoadConfig("testdata/operationfiles_move/gqlgen.yml")
+	require.NoError(t, err)
+	require.NoError(t, cfg.Init())
+	data, err := codegen.BuildData(cfg)
+	require.NoError(t, err)
+	require.NoError(t, (&Plugin{}).GenerateCode(data))
+
+	b, err := os.ReadFile(dir + "shout_mutation.go")
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"strings"`)
+	require.Contains(t, string(b), `strings.ToUpper("hello")`)
+
+	// The old file is now redundant; once it is gone the package must compile.
+	require.NoError(t, syscall.Unlink(dir+"legacy.go"))
+	assertNoErrors(t, "github.com/99designs/gqlgen/plugin/resolvergen/testdata/operationfiles_move/out")
+}
+
+func TestGqlToOperationResolverName(t *testing.T) {
+	tests := map[string]struct{ tmpl, schema, field, want string }{
+		"field":                  {"{field}_mutation.go", "orders.graphql", "createOrder", "out/create_order_mutation.go"},
+		"acronym stays together": {"{field}_mutation.go", "orders.graphql", "uploadHTTPLog", "out/upload_http_log_mutation.go"},
+		"schema file name":       {"{name}_{field}.go", "orders.graphql", "cancel", "out/orders_cancel.go"},
+		"leading underscore":     {"{field}_mutation.go", "orders.graphql", "_noop", "out/noop_mutation.go"},
+		"test suffix avoided":    {"{field}_test.go", "orders.graphql", "run", "out/run_test_.go"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, gqlToOperationResolverName("out", "dir/"+tt.schema, tt.tmpl, tt.field))
+		})
+	}
+}
+
 func TestLayoutInvalidModelPath(t *testing.T) {
 	cfg, err := config.LoadConfig("testdata/invalid_model_path/gqlgen.yml")
 	require.NoError(t, err)

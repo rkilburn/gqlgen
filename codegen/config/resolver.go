@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/types"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/99designs/gqlgen/internal/code"
@@ -30,6 +31,15 @@ type ResolverConfig struct {
 	// bodies: dependencies are reached as "r.r.myService" rather than
 	// "r.myService".
 	OmitResolverEmbedding bool `yaml:"omit_resolver_embedding,omitempty"`
+
+	// MutationFilenameTemplate, with layout=follow-schema, gives each field of the Mutation type
+	// a file of its own instead of the file for its schema file. {field} is replaced with the
+	// snake_case name of the field and {name} with the name of the schema file declaring it, e.g.
+	// "{field}_mutation.go" gives create_order_mutation.go.
+	MutationFilenameTemplate string `yaml:"mutation_filename_template,omitempty"`
+	// SubscriptionFilenameTemplate does the same for the fields of the Subscription type, e.g.
+	// "{field}_subscription.go" gives order_sent_subscription.go.
+	SubscriptionFilenameTemplate string `yaml:"subscription_filename_template,omitempty"`
 }
 
 // ResolverBatchConfig enables batch resolver generation for resolver fields as if they
@@ -66,6 +76,31 @@ var (
 	LayoutFollowSchema ResolverLayout = "follow-schema"
 )
 
+var placeholderPattern = regexp.MustCompile(`\{[^{}]*\}`)
+
+// checkOperationFilenameTemplate validates a mutation or subscription filename template, if one is
+// set. It requires {field}, so that two fields cannot share a file name, and rejects any other
+// placeholder than {name}.
+func checkOperationFilenameTemplate(option, tmpl string) error {
+	if tmpl == "" {
+		return nil
+	}
+	for _, p := range placeholderPattern.FindAllString(tmpl, -1) {
+		if p != "{field}" && p != "{name}" {
+			return fmt.Errorf(
+				"%s: unknown placeholder %s in %q, expected {field} or {name}", option, p, tmpl,
+			)
+		}
+	}
+	if !strings.Contains(tmpl, "{field}") {
+		return fmt.Errorf("%s: %q must contain {field}", option, tmpl)
+	}
+	if !strings.HasSuffix(tmpl, ".go") {
+		return fmt.Errorf("%s: %q should end in .go", option, tmpl)
+	}
+	return nil
+}
+
 func (r *ResolverConfig) Check() error {
 	if r.Layout == "" {
 		r.Layout = LayoutSingleFile
@@ -79,6 +114,13 @@ func (r *ResolverConfig) Check() error {
 		if r.Filename == "" {
 			return fmt.Errorf("filename must be specified with layout=%s", r.Layout)
 		}
+		if r.MutationFilenameTemplate != "" || r.SubscriptionFilenameTemplate != "" {
+			return fmt.Errorf(
+				"mutation_filename_template and subscription_filename_template need layout=%s, not %s",
+				LayoutFollowSchema,
+				r.Layout,
+			)
+		}
 		if !strings.HasSuffix(r.Filename, ".go") {
 			return fmt.Errorf(
 				"filename should be path to a go source file with layout=%s",
@@ -89,6 +131,16 @@ func (r *ResolverConfig) Check() error {
 	case LayoutFollowSchema:
 		if r.DirName == "" {
 			return fmt.Errorf("dirname must be specified with layout=%s", r.Layout)
+		}
+		if err := checkOperationFilenameTemplate(
+			"mutation_filename_template", r.MutationFilenameTemplate,
+		); err != nil {
+			return err
+		}
+		if err := checkOperationFilenameTemplate(
+			"subscription_filename_template", r.SubscriptionFilenameTemplate,
+		); err != nil {
+			return err
 		}
 		r.DirName = abs(r.DirName)
 		if r.Filename == "" {

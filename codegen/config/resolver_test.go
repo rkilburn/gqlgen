@@ -164,3 +164,52 @@ func TestResolverConfig(t *testing.T) {
 		)
 	})
 }
+
+func TestResolverConfigOperationFilenameTemplates(t *testing.T) {
+	t.Run("valid for follow-schema", func(t *testing.T) {
+		p := ResolverConfig{
+			Layout:                       LayoutFollowSchema,
+			DirName:                      "testdata",
+			MutationFilenameTemplate:     "{field}_mutation.go",
+			SubscriptionFilenameTemplate: "{name}_{field}_subscription.go",
+		}
+		require.NoError(t, p.Check())
+	})
+
+	t.Run("not for single-file", func(t *testing.T) {
+		p := ResolverConfig{
+			Layout:                   LayoutSingleFile,
+			Filename:                 "testdata/example.go",
+			MutationFilenameTemplate: "{field}_mutation.go",
+		}
+		require.ErrorContains(t, p.Check(), "need layout=follow-schema")
+	})
+
+	for name, tt := range map[string]struct {
+		cfg     ResolverConfig
+		wantErr string
+	}{
+		"mutation must name the field": {
+			ResolverConfig{MutationFilenameTemplate: "{name}.go"},
+			"mutation_filename_template: \"{name}.go\" must contain {field}",
+		},
+		"subscription must name the field": {
+			ResolverConfig{SubscriptionFilenameTemplate: "subscription.go"},
+			"subscription_filename_template: \"subscription.go\" must contain {field}",
+		},
+		"unknown placeholder": {
+			ResolverConfig{MutationFilenameTemplate: "{object}_{field}.go"},
+			"unknown placeholder {object}",
+		},
+		"go file": {
+			ResolverConfig{MutationFilenameTemplate: "{field}.txt"},
+			"should end in .go",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			tt.cfg.Layout = LayoutFollowSchema
+			tt.cfg.DirName = "testdata"
+			require.ErrorContains(t, tt.cfg.Check(), tt.wantErr)
+		})
+	}
+}

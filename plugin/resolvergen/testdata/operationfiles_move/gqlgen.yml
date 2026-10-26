@@ -1,0 +1,14 @@
+schema:
+  - "testdata/operationfiles_move/schema.graphql"
+
+exec:
+  filename: testdata/operationfiles_move/out/ignored.go
+model:
+  filename: testdata/operationfiles_move/out/generated.go
+resolver:
+  type: CustomResolverType
+  layout: follow-schema
+  dir: testdata/operationfiles_move/out
+  mutation_filename_template: "{field}_mutation.go"
+
+omit_gqlgen_version_in_file_notice: true
