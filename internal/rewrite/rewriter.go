@@ -170,21 +170,40 @@ func (r *Rewriter) ExistingImports(filename string) []Import {
 			continue
 		}
 
-		var imps []Import
-		for _, i := range f.Imports {
-			name := ""
-			if i.Name != nil {
-				name = i.Name.Name
-			}
-			path, err := strconv.Unquote(i.Path.Value)
-			if err != nil {
-				panic(err)
-			}
-			imps = append(imps, Import{name, path})
-		}
-		return imps
+		return fileImports(f)
 	}
 	return nil
+}
+
+// MethodImports returns the imports of the file that currently declares the method, so a body
+// that is being moved to another file can bring the imports it needs with it.
+func (r *Rewriter) MethodImports(structname, methodname string) []Import {
+	d := r.GetPrevDecl(structname, methodname)
+	if d == nil {
+		return nil
+	}
+	for _, f := range r.pkg.Syntax {
+		if f.Pos() <= d.Pos() && d.End() <= f.End() {
+			return fileImports(f)
+		}
+	}
+	return nil
+}
+
+func fileImports(f *ast.File) []Import {
+	var imps []Import
+	for _, i := range f.Imports {
+		name := ""
+		if i.Name != nil {
+			name = i.Name.Name
+		}
+		path, err := strconv.Unquote(i.Path.Value)
+		if err != nil {
+			panic(err)
+		}
+		imps = append(imps, Import{name, path})
+	}
+	return imps
 }
 
 func (r *Rewriter) RemainingSource(filename string) string {
