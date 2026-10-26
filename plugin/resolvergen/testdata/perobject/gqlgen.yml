@@ -1,0 +1,30 @@
+schema:
+  - "testdata/perobject/schema.graphql"
+
+exec:
+  filename: testdata/perobject/out/ignored.go
+model:
+  filename: testdata/perobject/out/generated.go
+resolver:
+  type: CustomResolverType
+  layout: follow-schema
+  dir: testdata/perobject/out
+  filename_template: "{object}.go"
+
+models:
+  Customer:
+    model: github.com/99designs/gqlgen/plugin/resolvergen/testdata/perobject/out.Customer
+    fields:
+      name:
+        resolver: true
+      orders:
+        resolver: true
+      email:
+        resolver: true
+  Order:
+    model: github.com/99designs/gqlgen/plugin/resolvergen/testdata/perobject/out.Order
+    fields:
+      total:
+        resolver: true
+
+omit_gqlgen_version_in_file_notice: true

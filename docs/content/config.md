@@ -56,6 +56,9 @@ resolver:
 
   # Only for follow-schema layout:
   dir: graph
+  # {name} is the schema file's base name. {object} is the snake_case name of the GraphQL object,
+  # e.g. "{object}.go" gives query.go and certificate_application.go. With {object}, every field
+  # of an object is generated into that object's file, even when it comes from an `extend type`.
   filename_template: "{name}.resolvers.go"
 
   # Optional: turn on to not generate template comments above resolvers

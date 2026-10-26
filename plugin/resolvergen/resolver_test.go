@@ -151,6 +151,43 @@ func TestLayoutFollowSchemaWithCustomFilename(t *testing.T) {
 	require.Contains(t, source, "// AUserHelperFunction implementation")
 }
 
+func TestLayoutFollowSchemaWithObjectFilename(t *testing.T) {
+	testFollowSchemaPersistence(t, "testdata/perobject")
+
+	// Every field of an object lands in that object's file, including Customer.email,
+	// which the schema extends further down than the type itself.
+	for file, wants := range map[string][]string{
+		"query":    {") Customer(ctx", ") Order(ctx", "type queryCustomResolverType struct"},
+		"customer": {") Name(ctx", ") Orders(ctx", ") Email(ctx", "type customerCustomResolverType struct"},
+		"order":    {") Total(ctx", "type orderCustomResolverType struct"},
+	} {
+		b, err := os.ReadFile("testdata/perobject/out/" + file + ".go")
+		require.NoError(t, err, file)
+		for _, want := range wants {
+			require.Contains(t, string(b), want, file)
+		}
+	}
+	require.NoFileExists(t, "testdata/perobject/out/schema.go")
+}
+
+func TestGqlToResolverName(t *testing.T) {
+	tests := map[string]struct {
+		tmpl, object, want string
+	}{
+		"default template follows the schema file": {"", "Query", "out/schema.resolvers.go"},
+		"name placeholder":                         {"{name}.custom.go", "Query", "out/schema.custom.go"},
+		"object placeholder":                       {"{object}.go", "CertificateApplication", "out/certificate_application.go"},
+		"acronym stays together":                   {"{object}.go", "HTTPLog", "out/http_log.go"},
+		"digits":                                   {"{object}.go", "OAuth2Client", "out/o_auth2_client.go"},
+		"both placeholders":                        {"{name}_{object}.go", "Query", "out/schema_query.go"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, gqlToResolverName("out", "path/to/schema.graphql", tt.tmpl, tt.object))
+		})
+	}
+}
+
 func TestLayoutInvalidModelPath(t *testing.T) {
 	cfg, err := config.LoadConfig("testdata/invalid_model_path/gqlgen.yml")
 	require.NoError(t, err)

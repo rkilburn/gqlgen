@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -158,6 +159,7 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 				data.Config.Resolver.Dir(),
 				o.Position.Src.Name,
 				data.Config.Resolver.FilenameTemplate,
+				o.Name,
 			)
 			fn := strings.ToLower(fnCase)
 			if files[fn] == nil {
@@ -203,10 +205,17 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 				implExists = true
 				resolver.ImplementationRender = rImpl.Implement
 			}
+			// A template naming the object keeps every field of an object in the
+			// file for that object, even when the field is extended in another schema file.
+			src := f.Position.Src.Name
+			if strings.Contains(data.Config.Resolver.FilenameTemplate, objectPlaceholder) {
+				src = o.Position.Src.Name
+			}
 			fnCase := gqlToResolverName(
 				data.Config.Resolver.Dir(),
-				f.Position.Src.Name,
+				src,
 				data.Config.Resolver.FilenameTemplate,
+				o.Name,
 			)
 			fn := strings.ToLower(fnCase)
 			if files[fn] == nil {
@@ -404,14 +413,37 @@ func (r *Resolver) Implementation() string {
 	return r.ImplementationStr
 }
 
-func gqlToResolverName(base, gqlname, filenameTmpl string) string {
+// objectPlaceholder in a filename template is replaced with the snake_case name of the object,
+// putting each object's resolvers in a file of their own.
+const objectPlaceholder = "{object}"
+
+func gqlToResolverName(base, gqlname, filenameTmpl, objectName string) string {
 	gqlname = filepath.Base(gqlname)
 	ext := filepath.Ext(gqlname)
 	if filenameTmpl == "" {
 		filenameTmpl = "{name}.resolvers.go"
 	}
 	filename := strings.ReplaceAll(filenameTmpl, "{name}", strings.TrimSuffix(gqlname, ext))
+	filename = strings.ReplaceAll(filename, objectPlaceholder, snakeCase(objectName))
 	return filepath.Join(base, filename)
+}
+
+// snakeCase turns a GraphQL type name such as "CertificateApplication" or "HTTPLog" into
+// "certificate_application" or "http_log".
+func snakeCase(s string) string {
+	runes := []rune(s)
+	var sb strings.Builder
+	for i, r := range runes {
+		if unicode.IsUpper(r) {
+			if i > 0 && (unicode.IsLower(runes[i-1]) || unicode.IsDigit(runes[i-1]) ||
+				(unicode.IsUpper(runes[i-1]) && i+1 < len(runes) && unicode.IsLower(runes[i+1]))) {
+				sb.WriteByte('_')
+			}
+			r = unicode.ToLower(r)
+		}
+		sb.WriteRune(r)
+	}
+	return sb.String()
 }
 
 func readResolverTemplate(customResolverTemplate string) string {
