@@ -113,7 +113,7 @@
           "default": "{field}_{object}.go"
         },
         "fields_filename_template": {
-          "description": "Only for follow-object layout. File name for the fields of every other object. {object} is the snake_case name.",
+          "description": "Only for follow-object layout. File name for the fields of every other object. {object} is the snake_case name; add {field} to give each field a file of its own.",
           "type": "string",
           "default": "{object}_fields.go"
         },

@@ -240,7 +240,7 @@ func TestObjectFilename(t *testing.T) {
 		"digits":                     {"{object}_fields.go", "OAuth2Client", "x", "o_auth2_client_fields.go"},
 		"leading underscore dropped": {"{field}_{object}.go", "Query", "_empty", "empty_query.go"},
 		"test suffix avoided":        {"{field}_{object}.go", "Test", "run", "run_test_.go"},
-		"object first":               {"{object}_{field}.go", "Order", "payment", "order_payment.go"},
+		"object first":               {"{object}_{field}_resolver.go", "OrderItem", "product", "order_item_product_resolver.go"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

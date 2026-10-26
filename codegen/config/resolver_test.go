@@ -177,6 +177,15 @@ func TestResolverConfigFollowObject(t *testing.T) {
 		require.Equal(t, p.DirName, p.Dir())
 	})
 
+	t.Run("fields can have a file each", func(t *testing.T) {
+		p := ResolverConfig{
+			Layout:                 LayoutFollowObject,
+			DirName:                "testdata",
+			FieldsFilenameTemplate: "{object}_{field}_resolver.go",
+		}
+		require.NoError(t, p.Check())
+	})
+
 	t.Run("needs a dir", func(t *testing.T) {
 		p := ResolverConfig{Layout: LayoutFollowObject}
 		require.ErrorContains(t, p.Check(), "dirname must be specified")
@@ -207,9 +216,9 @@ func TestResolverConfigFollowObject(t *testing.T) {
 			ResolverConfig{FieldsFilenameTemplate: "fields.go"},
 			"must contain {object}",
 		},
-		"fields have no field placeholder": {
-			ResolverConfig{FieldsFilenameTemplate: "{object}_{field}.go"},
-			"unknown placeholder {field}",
+		"fields have no name placeholder": {
+			ResolverConfig{FieldsFilenameTemplate: "{name}_{object}.go"},
+			"unknown placeholder {name}",
 		},
 		"templates are go files": {
 			ResolverConfig{OperationsFilenameTemplate: "{field}_{object}.txt"},

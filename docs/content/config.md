@@ -66,6 +66,8 @@ resolver:
   #   fields_filename_template: "{object}_fields.go"       # default; order_item_fields.go
   #   types_filename: resolver_generated.go                # default
   # {object} and {field} are the snake_case names. filename_template is not used with this layout.
+  # Add {field} to fields_filename_template for a file per field of every object:
+  #   fields_filename_template: "{object}_{field}_resolver.go"  # order_item_product_resolver.go
 
   # Optional: turn on to not generate template comments above resolvers
   # omit_template_comment: false

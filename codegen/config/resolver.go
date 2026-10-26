@@ -41,7 +41,8 @@ type ResolverConfig struct {
 	OperationsFilenameTemplate string `yaml:"operations_filename_template,omitempty"`
 	// FieldsFilenameTemplate names the file for the fields of every other object. {object} is
 	// replaced with the snake_case name of the object. Defaults to "{object}_fields.go", e.g.
-	// order_item_fields.go.
+	// order_item_fields.go. Add {field} to give each field a file of its own, e.g.
+	// "{object}_{field}_resolver.go" for order_item_product_resolver.go.
 	FieldsFilenameTemplate string `yaml:"fields_filename_template,omitempty"`
 	// TypesFilename names the file that holds every object's resolver type and its accessor on the
 	// root resolver, leaving the other files with only resolver methods. It is regenerated in full
@@ -180,7 +181,7 @@ func (r *ResolverConfig) Check() error {
 		}
 		if err := checkPlaceholders(
 			"fields_filename_template", r.FieldsFilenameTemplate,
-			[]string{"{object}"}, []string{"{object}"},
+			[]string{"{object}", "{field}"}, []string{"{object}"},
 		); err != nil {
 			return err
 		}
