@@ -59,12 +59,12 @@ resolver:
   # {name} is the schema file's base name. {object} is the snake_case name of the GraphQL object,
   # e.g. "{object}.go" gives query.go and certificate_application.go. With {object}, every field
   # of an object is generated into that object's file, even when it comes from an `extend type`.
-  # {field} is the field's name as written in the schema, and puts every resolver in a file of its
-  # own: "{field}_{object}.go" gives createOrder_mutation.go and name_customer.go.
+  # {field} is the snake_case name of the field, and puts every resolver in a file of its
+  # own: "{field}_{object}.go" gives create_order_mutation.go and name_customer.go.
   # With {field}, each object's resolver type and accessor go in "{object}.go".
   # Optional: operation_filename_template names the files for the fields of Query, Mutation and
   # Subscription instead, so operations get a file each while other objects' fields are grouped:
-  #   operation_filename_template: "{field}_{object}.go"   # createOrder_mutation.go
+  #   operation_filename_template: "{field}_{object}.go"   # create_order_mutation.go
   #   filename_template: "{object}_resolver.go"            # order_resolver.go
   # Optional: boilerplate_filename puts every object's resolver type and accessor
   # (type orderResolver struct{ *Resolver } and func (r *Resolver) Order() ...) in one generated

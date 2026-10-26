@@ -457,8 +457,8 @@ func (r *Resolver) Implementation() string {
 // putting each object's resolvers in a file of their own.
 const objectPlaceholder = "{object}"
 
-// fieldPlaceholder in a filename template is replaced with the field's name as written in the
-// schema, putting each resolver in a file of its own.
+// fieldPlaceholder in a filename template is replaced with the snake_case name of the field,
+// putting each resolver in a file of its own.
 const fieldPlaceholder = "{field}"
 
 func gqlToResolverName(base, gqlname, filenameTmpl, objectName, fieldName string) string {
@@ -469,7 +469,7 @@ func gqlToResolverName(base, gqlname, filenameTmpl, objectName, fieldName string
 	}
 	filename := strings.ReplaceAll(filenameTmpl, "{name}", strings.TrimSuffix(gqlname, ext))
 	filename = strings.ReplaceAll(filename, objectPlaceholder, snakeCase(objectName))
-	filename = strings.ReplaceAll(filename, fieldPlaceholder, fieldName)
+	filename = strings.ReplaceAll(filename, fieldPlaceholder, snakeCase(fieldName))
 	return filepath.Join(base, goSafeFilename(filename))
 }
 

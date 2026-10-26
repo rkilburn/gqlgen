@@ -204,14 +204,14 @@ func TestLayoutFollowSchemaWithOperationFilename(t *testing.T) {
 	// Operations get a file each; the fields of other objects stay with their object, however
 	// deeply nested: Query.order -> Order.items -> OrderItem.product -> Product.supplier.
 	for file, wants := range map[string][]string{
-		"customer_query.go":       {") Customer(ctx"},
-		"order_query.go":          {") Order(ctx"},
-		"createOrder_mutation.go": {") CreateOrder(ctx"},
-		"customer_resolver.go":    {") Name(ctx", ") Orders(ctx", ") Email(ctx"},
-		"order_resolver.go":       {") Total(ctx", ") Items(ctx"},
-		"order_item_resolver.go":  {") Quantity(ctx", ") Product(ctx"},
-		"product_resolver.go":     {") Name(ctx", ") Supplier(ctx"},
-		"supplier_resolver.go":    {") Name(ctx"},
+		"customer_query.go":        {") Customer(ctx"},
+		"order_query.go":           {") Order(ctx"},
+		"create_order_mutation.go": {") CreateOrder(ctx"},
+		"customer_resolver.go":     {") Name(ctx", ") Orders(ctx", ") Email(ctx"},
+		"order_resolver.go":        {") Total(ctx", ") Items(ctx"},
+		"order_item_resolver.go":   {") Quantity(ctx", ") Product(ctx"},
+		"product_resolver.go":      {") Name(ctx", ") Supplier(ctx"},
+		"supplier_resolver.go":     {") Name(ctx"},
 	} {
 		b, err := os.ReadFile(dir + file)
 		require.NoError(t, err, file)
@@ -271,7 +271,7 @@ func TestGqlToResolverName(t *testing.T) {
 		"both placeholders":                        {"{name}_{object}.go", "Query", "", "out/schema_query.go"},
 		"leading underscore is dropped":            {"{field}_{object}.go", "Query", "_empty", "out/empty_query.go"},
 		"test suffix is avoided":                   {"{field}_{object}.go", "Test", "run", "out/run_test_.go"},
-		"field and object":                         {"{field}_{object}.go", "Mutation", "createOrder", "out/createOrder_mutation.go"},
+		"field and object":                         {"{field}_{object}.go", "Mutation", "createOrder", "out/create_order_mutation.go"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
