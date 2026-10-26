@@ -66,6 +66,10 @@ resolver:
   # Subscription instead, so operations get a file each while other objects' fields are grouped:
   #   operation_filename_template: "{field}_{object}.go"   # createOrder_mutation.go
   #   filename_template: "{object}_resolver.go"            # order_resolver.go
+  # Optional: boilerplate_filename puts every object's resolver type and accessor
+  # (type orderResolver struct{ *Resolver } and func (r *Resolver) Order() ...) in one generated
+  # file, leaving the other files with only resolver methods:
+  #   boilerplate_filename: resolvers.gen.go
   filename_template: "{name}.resolvers.go"
 
   # Optional: turn on to not generate template comments above resolvers

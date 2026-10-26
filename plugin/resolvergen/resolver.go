@@ -167,6 +167,12 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 				o.Name,
 				"",
 			)
+			if data.Config.Resolver.BoilerplateFilename != "" {
+				fnCase = filepath.Join(
+					data.Config.Resolver.Dir(),
+					data.Config.Resolver.BoilerplateFilename,
+				)
+			}
 			fn := strings.ToLower(fnCase)
 			if files[fn] == nil {
 				files[fn] = &File{

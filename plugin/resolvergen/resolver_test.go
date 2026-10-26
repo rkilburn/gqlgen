@@ -199,6 +199,7 @@ func TestLayoutFollowSchemaWithFieldFilename(t *testing.T) {
 
 func TestLayoutFollowSchemaWithOperationFilename(t *testing.T) {
 	testFollowSchemaPersistence(t, "testdata/peroperation")
+	const dir = "testdata/peroperation/out/"
 
 	// Operations get a file each; the fields of other objects stay with their object, however
 	// deeply nested: Query.order -> Order.items -> OrderItem.product -> Product.supplier.
@@ -206,20 +207,32 @@ func TestLayoutFollowSchemaWithOperationFilename(t *testing.T) {
 		"customer_query.go":       {") Customer(ctx"},
 		"order_query.go":          {") Order(ctx"},
 		"createOrder_mutation.go": {") CreateOrder(ctx"},
-		"query_resolver.go":       {"type queryCustomResolverType struct", ") Query() QueryResolver"},
-		"mutation_resolver.go":    {"type mutationCustomResolverType struct"},
-		"customer_resolver.go":    {") Name(ctx", ") Orders(ctx", ") Email(ctx", "type customerCustomResolverType struct"},
-		"order_resolver.go":       {") Total(ctx", ") Items(ctx", "type orderCustomResolverType struct"},
-		"order_item_resolver.go":  {") Quantity(ctx", ") Product(ctx", "type orderItemCustomResolverType struct"},
-		"product_resolver.go":     {") Name(ctx", ") Supplier(ctx", "type productCustomResolverType struct"},
-		"supplier_resolver.go":    {") Name(ctx", "type supplierCustomResolverType struct"},
+		"customer_resolver.go":    {") Name(ctx", ") Orders(ctx", ") Email(ctx"},
+		"order_resolver.go":       {") Total(ctx", ") Items(ctx"},
+		"order_item_resolver.go":  {") Quantity(ctx", ") Product(ctx"},
+		"product_resolver.go":     {") Name(ctx", ") Supplier(ctx"},
+		"supplier_resolver.go":    {") Name(ctx"},
 	} {
-		b, err := os.ReadFile("testdata/peroperation/out/" + file)
+		b, err := os.ReadFile(dir + file)
 		require.NoError(t, err, file)
 		for _, want := range wants {
 			require.Contains(t, string(b), want, file)
 		}
+		// The boilerplate lives in one file, not beside the methods.
+		require.NotContains(t, string(b), "struct{", file)
 	}
+
+	// Every object's type and accessor, root types included, is in the one boilerplate file.
+	b, err := os.ReadFile(dir + "resolvers.gen.go")
+	require.NoError(t, err)
+	for _, want := range []string{
+		") Query() QueryResolver", ") Mutation() MutationResolver", ") Customer() CustomerResolver",
+		") Order() OrderResolver", ") OrderItem() OrderItemResolver", ") Product() ProductResolver",
+		") Supplier() SupplierResolver", "queryCustomResolverType", "supplierCustomResolverType",
+	} {
+		require.Contains(t, string(b), want)
+	}
+	require.NoFileExists(t, dir+"query_resolver.go")
 }
 
 func TestLayoutFollowSchemaWithObjectFilenameMovesImports(t *testing.T) {

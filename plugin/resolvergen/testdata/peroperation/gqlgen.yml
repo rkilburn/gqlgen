@@ -11,6 +11,7 @@ resolver:
   dir: testdata/peroperation/out
   filename_template: "{object}_resolver.go"
   operation_filename_template: "{field}_{object}.go"
+  boilerplate_filename: resolvers.gen.go
 
 models:
   Customer:

@@ -35,6 +35,11 @@ type ResolverConfig struct {
 	// (Query, Mutation, Subscription) instead of FilenameTemplate, so operations can have a
 	// file each while the fields of other objects are grouped.
 	OperationFilenameTemplate string `yaml:"operation_filename_template,omitempty"`
+
+	// BoilerplateFilename, when set, is the one file (in the resolver dir) that holds every
+	// object's resolver type and its accessor on the root resolver, leaving the other files
+	// with only resolver methods. It is regenerated in full each time.
+	BoilerplateFilename string `yaml:"boilerplate_filename,omitempty"`
 }
 
 // ResolverBatchConfig enables batch resolver generation for resolver fields as if they

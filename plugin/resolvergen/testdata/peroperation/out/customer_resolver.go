@@ -24,8 +24,3 @@ func (r *customerCustomResolverType) Orders(ctx context.Context, obj *Customer) 
 func (r *customerCustomResolverType) Email(ctx context.Context, obj *Customer) (string, error) {
 	panic(fmt.Errorf("not implemented: Email - email"))
 }
-
-// Customer returns CustomerResolver implementation.
-func (r *CustomResolverType) Customer() CustomerResolver { return &customerCustomResolverType{r} }
-
-type customerCustomResolverType struct{ *CustomResolverType }

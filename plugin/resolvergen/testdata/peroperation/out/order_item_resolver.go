@@ -19,8 +19,3 @@ func (r *orderItemCustomResolverType) Quantity(ctx context.Context, obj *OrderIt
 func (r *orderItemCustomResolverType) Product(ctx context.Context, obj *OrderItem) (*Product, error) {
 	panic(fmt.Errorf("not implemented: Product - product"))
 }
-
-// OrderItem returns OrderItemResolver implementation.
-func (r *CustomResolverType) OrderItem() OrderItemResolver { return &orderItemCustomResolverType{r} }
-
-type orderItemCustomResolverType struct{ *CustomResolverType }

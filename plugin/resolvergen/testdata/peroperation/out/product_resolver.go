@@ -19,8 +19,3 @@ func (r *productCustomResolverType) Name(ctx context.Context, obj *Product) (str
 func (r *productCustomResolverType) Supplier(ctx context.Context, obj *Product) (*Supplier, error) {
 	panic(fmt.Errorf("not implemented: Supplier - supplier"))
 }
-
-// Product returns ProductResolver implementation.
-func (r *CustomResolverType) Product() ProductResolver { return &productCustomResolverType{r} }
-
-type productCustomResolverType struct{ *CustomResolverType }

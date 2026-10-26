@@ -14,8 +14,3 @@ import (
 func (r *supplierCustomResolverType) Name(ctx context.Context, obj *Supplier) (string, error) {
 	panic(fmt.Errorf("not implemented: Name - name"))
 }
-
-// Supplier returns SupplierResolver implementation.
-func (r *CustomResolverType) Supplier() SupplierResolver { return &supplierCustomResolverType{r} }
-
-type supplierCustomResolverType struct{ *CustomResolverType }

@@ -19,8 +19,3 @@ func (r *orderCustomResolverType) Total(ctx context.Context, obj *Order) (int, e
 func (r *orderCustomResolverType) Items(ctx context.Context, obj *Order) ([]*OrderItem, error) {
 	panic(fmt.Errorf("not implemented: Items - items"))
 }
-
-// Order returns OrderResolver implementation.
-func (r *CustomResolverType) Order() OrderResolver { return &orderCustomResolverType{r} }
-
-type orderCustomResolverType struct{ *CustomResolverType }
