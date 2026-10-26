@@ -94,7 +94,7 @@
       "properties": {
         "layout": {
           "type": "string",
-          "enum": ["single-file", "follow-schema"],
+          "enum": ["single-file", "follow-schema", "follow-object"],
           "default": "follow-schema"
         },
         "package": { "type": "string" },
@@ -107,6 +107,21 @@
         "omit_template_comment": { "type": "boolean" },
         "resolver_template": { "type": "string" },
         "preserve_resolver": { "type": "boolean" },
+        "operations_filename_template": {
+          "description": "Only for follow-object layout. File name for each field of the root types (Query, Mutation, Subscription). {object} and {field} are the snake_case names.",
+          "type": "string",
+          "default": "{field}_{object}.go"
+        },
+        "fields_filename_template": {
+          "description": "Only for follow-object layout. File name for the fields of every other object. {object} is the snake_case name.",
+          "type": "string",
+          "default": "{object}_fields.go"
+        },
+        "types_filename": {
+          "description": "Only for follow-object layout. File holding every object's resolver type and its accessor on the root resolver, regenerated in full each time.",
+          "type": "string",
+          "default": "resolver_generated.go"
+        },
         "omit_resolver_embedding": {
           "description": "Declare the per-object resolver types with a named \"r\" field instead of embedding the root resolver. Speeds up compilation on large schemas. Source-breaking for existing resolver bodies: dependencies become r.r.myService instead of r.myService.",
           "type": "boolean",

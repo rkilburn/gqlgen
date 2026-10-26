@@ -14,8 +14,3 @@ import (
 func (r *queryCustomResolverType) Greeting(ctx context.Context) (string, error) {
 	return strings.ToUpper("hello"), nil
 }
-
-// Query returns QueryResolver implementation.
-func (r *CustomResolverType) Query() QueryResolver { return &queryCustomResolverType{r} }
-
-type queryCustomResolverType struct{ *CustomResolverType }

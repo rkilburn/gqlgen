@@ -49,28 +49,23 @@ model:
 # Where should the resolver implementations go?
 resolver:
   package: graph
-  layout: follow-schema # Only other option is "single-file."
+  layout: follow-schema # Or "single-file" or "follow-object" (see below).
 
   # Only for single-file layout:
   # filename: graph/resolver.go
 
   # Only for follow-schema layout:
   dir: graph
-  # {name} is the schema file's base name. {object} is the snake_case name of the GraphQL object,
-  # e.g. "{object}.go" gives query.go and certificate_application.go. With {object}, every field
-  # of an object is generated into that object's file, even when it comes from an `extend type`.
-  # {field} is the snake_case name of the field, and puts every resolver in a file of its
-  # own: "{field}_{object}.go" gives create_order_mutation.go and name_customer.go.
-  # With {field}, each object's resolver type and accessor go in "{object}.go".
-  # Optional: operation_filename_template names the files for the fields of Query, Mutation and
-  # Subscription instead, so operations get a file each while other objects' fields are grouped:
-  #   operation_filename_template: "{field}_{object}.go"   # create_order_mutation.go
-  #   filename_template: "{object}_resolver.go"            # order_resolver.go
-  # Optional: boilerplate_filename puts every object's resolver type and accessor
-  # (type orderResolver struct{ *Resolver } and func (r *Resolver) Order() ...) in one generated
-  # file, leaving the other files with only resolver methods:
-  #   boilerplate_filename: resolvers.gen.go
   filename_template: "{name}.resolvers.go"
+
+  # Optional: with layout: follow-object resolvers are split by object instead of by schema file.
+  # Every field of Query, Mutation and Subscription gets a file of its own, the fields of every
+  # other object share one file, and all the resolver types go in one generated file:
+  #   layout: follow-object
+  #   operations_filename_template: "{field}_{object}.go"  # default; create_order_mutation.go
+  #   fields_filename_template: "{object}_fields.go"       # default; order_item_fields.go
+  #   types_filename: resolver_generated.go                # default
+  # {object} and {field} are the snake_case names. filename_template is not used with this layout.
 
   # Optional: turn on to not generate template comments above resolvers
   # omit_template_comment: false

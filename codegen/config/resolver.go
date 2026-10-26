@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"go/types"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/99designs/gqlgen/internal/code"
@@ -31,15 +33,20 @@ type ResolverConfig struct {
 	// "r.myService".
 	OmitResolverEmbedding bool `yaml:"omit_resolver_embedding,omitempty"`
 
-	// OperationFilenameTemplate, when set, names the files for the fields of the root types
-	// (Query, Mutation, Subscription) instead of FilenameTemplate, so operations can have a
-	// file each while the fields of other objects are grouped.
-	OperationFilenameTemplate string `yaml:"operation_filename_template,omitempty"`
+	// The options below only apply to layout=follow-object.
 
-	// BoilerplateFilename, when set, is the one file (in the resolver dir) that holds every
-	// object's resolver type and its accessor on the root resolver, leaving the other files
-	// with only resolver methods. It is regenerated in full each time.
-	BoilerplateFilename string `yaml:"boilerplate_filename,omitempty"`
+	// OperationsFilenameTemplate names the file for each field of the root types (Query,
+	// Mutation, Subscription). {object} and {field} are replaced with the snake_case name of the
+	// type and the field. Defaults to "{field}_{object}.go", e.g. create_order_mutation.go.
+	OperationsFilenameTemplate string `yaml:"operations_filename_template,omitempty"`
+	// FieldsFilenameTemplate names the file for the fields of every other object. {object} is
+	// replaced with the snake_case name of the object. Defaults to "{object}_fields.go", e.g.
+	// order_item_fields.go.
+	FieldsFilenameTemplate string `yaml:"fields_filename_template,omitempty"`
+	// TypesFilename names the file that holds every object's resolver type and its accessor on the
+	// root resolver, leaving the other files with only resolver methods. It is regenerated in full
+	// each time. Defaults to "resolver_generated.go".
+	TypesFilename string `yaml:"types_filename,omitempty"`
 }
 
 // ResolverBatchConfig enables batch resolver generation for resolver fields as if they
@@ -74,7 +81,40 @@ type ResolverLayout string
 var (
 	LayoutSingleFile   ResolverLayout = "single-file"
 	LayoutFollowSchema ResolverLayout = "follow-schema"
+	// LayoutFollowObject writes a file per root-type field and a file per other object, with
+	// the resolver types of all of them in one more file.
+	LayoutFollowObject ResolverLayout = "follow-object"
 )
+
+const (
+	defaultOperationsFilenameTemplate = "{field}_{object}.go"
+	defaultFieldsFilenameTemplate     = "{object}_fields.go"
+	defaultTypesFilename              = "resolver_generated.go"
+)
+
+var placeholderPattern = regexp.MustCompile(`\{[^{}]*\}`)
+
+// checkPlaceholders rejects any {placeholder} in tmpl that is not one of allowed, and requires
+// every one of required to be present so that two files cannot be given the same name.
+func checkPlaceholders(option, tmpl string, allowed, required []string) error {
+	for _, p := range placeholderPattern.FindAllString(tmpl, -1) {
+		if !slices.Contains(allowed, p) {
+			return fmt.Errorf(
+				"%s: unknown placeholder %s in %q, expected %s",
+				option, p, tmpl, strings.Join(allowed, ", "),
+			)
+		}
+	}
+	for _, p := range required {
+		if !strings.Contains(tmpl, p) {
+			return fmt.Errorf("%s: %q must contain %s", option, tmpl, p)
+		}
+	}
+	if !strings.HasSuffix(tmpl, ".go") {
+		return fmt.Errorf("%s: %q should end in .go", option, tmpl)
+	}
+	return nil
+}
 
 func (r *ResolverConfig) Check() error {
 	if r.Layout == "" {
@@ -106,12 +146,57 @@ func (r *ResolverConfig) Check() error {
 		} else {
 			r.Filename = abs(r.Filename)
 		}
+	case LayoutFollowObject:
+		if r.DirName == "" {
+			return fmt.Errorf("dirname must be specified with layout=%s", r.Layout)
+		}
+		r.DirName = abs(r.DirName)
+		if r.Filename == "" {
+			r.Filename = filepath.Join(r.DirName, "resolver.go")
+		} else {
+			r.Filename = abs(r.Filename)
+		}
+		if r.FilenameTemplate != "" {
+			return fmt.Errorf(
+				"filename_template is not used with layout=%s, use operations_filename_template "+
+					"and fields_filename_template",
+				r.Layout,
+			)
+		}
+		if r.OperationsFilenameTemplate == "" {
+			r.OperationsFilenameTemplate = defaultOperationsFilenameTemplate
+		}
+		if r.FieldsFilenameTemplate == "" {
+			r.FieldsFilenameTemplate = defaultFieldsFilenameTemplate
+		}
+		if r.TypesFilename == "" {
+			r.TypesFilename = defaultTypesFilename
+		}
+		if err := checkPlaceholders(
+			"operations_filename_template", r.OperationsFilenameTemplate,
+			[]string{"{object}", "{field}"}, []string{"{field}"},
+		); err != nil {
+			return err
+		}
+		if err := checkPlaceholders(
+			"fields_filename_template", r.FieldsFilenameTemplate,
+			[]string{"{object}"}, []string{"{object}"},
+		); err != nil {
+			return err
+		}
+		if strings.ContainsAny(r.TypesFilename, "{}/\\") || !strings.HasSuffix(r.TypesFilename, ".go") {
+			return fmt.Errorf(
+				"types_filename: %q should be a go file name with no placeholders or directories",
+				r.TypesFilename,
+			)
+		}
 	default:
 		return fmt.Errorf(
-			"invalid layout %s. must be %s or %s",
+			"invalid layout %s. must be %s, %s or %s",
 			r.Layout,
 			LayoutSingleFile,
 			LayoutFollowSchema,
+			LayoutFollowObject,
 		)
 	}
 
@@ -142,7 +227,7 @@ func (r *ResolverConfig) Dir() string {
 			return ""
 		}
 		return filepath.Dir(r.Filename)
-	case LayoutFollowSchema:
+	case LayoutFollowSchema, LayoutFollowObject:
 		return r.DirName
 	default:
 		panic("invalid layout " + r.Layout)

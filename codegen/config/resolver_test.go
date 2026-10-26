@@ -160,7 +160,70 @@ func TestResolverConfig(t *testing.T) {
 		require.EqualError(
 			t,
 			p.Check(),
-			"invalid layout pies. must be single-file or follow-schema",
+			"invalid layout pies. must be single-file, follow-schema or follow-object",
 		)
 	})
+}
+
+func TestResolverConfigFollowObject(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		p := ResolverConfig{Layout: LayoutFollowObject, DirName: "testdata"}
+		require.NoError(t, p.Check())
+
+		require.Equal(t, "{field}_{object}.go", p.OperationsFilenameTemplate)
+		require.Equal(t, "{object}_fields.go", p.FieldsFilenameTemplate)
+		require.Equal(t, "resolver_generated.go", p.TypesFilename)
+		require.Contains(t, filepath.ToSlash(p.Filename), "testdata/resolver.go")
+		require.Equal(t, p.DirName, p.Dir())
+	})
+
+	t.Run("needs a dir", func(t *testing.T) {
+		p := ResolverConfig{Layout: LayoutFollowObject}
+		require.ErrorContains(t, p.Check(), "dirname must be specified")
+	})
+
+	t.Run("filename_template belongs to follow-schema", func(t *testing.T) {
+		p := ResolverConfig{
+			Layout:           LayoutFollowObject,
+			DirName:          "testdata",
+			FilenameTemplate: "{name}.go",
+		}
+		require.ErrorContains(t, p.Check(), "filename_template is not used")
+	})
+
+	for name, tt := range map[string]struct {
+		cfg     ResolverConfig
+		wantErr string
+	}{
+		"unknown placeholder": {
+			ResolverConfig{OperationsFilenameTemplate: "{name}_{field}.go"},
+			"unknown placeholder {name}",
+		},
+		"operations must name the field": {
+			ResolverConfig{OperationsFilenameTemplate: "{object}.go"},
+			"must contain {field}",
+		},
+		"fields must name the object": {
+			ResolverConfig{FieldsFilenameTemplate: "fields.go"},
+			"must contain {object}",
+		},
+		"fields have no field placeholder": {
+			ResolverConfig{FieldsFilenameTemplate: "{object}_{field}.go"},
+			"unknown placeholder {field}",
+		},
+		"templates are go files": {
+			ResolverConfig{OperationsFilenameTemplate: "{field}_{object}.txt"},
+			"should end in .go",
+		},
+		"types file is a plain go file": {
+			ResolverConfig{TypesFilename: "{object}.go"},
+			"types_filename",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			tt.cfg.Layout = LayoutFollowObject
+			tt.cfg.DirName = "testdata"
+			require.ErrorContains(t, tt.cfg.Check(), tt.wantErr)
+		})
+	}
 }

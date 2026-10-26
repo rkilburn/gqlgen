@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -47,6 +46,8 @@ func (m *Plugin) GenerateCode(data *codegen.Data) error {
 	case config.LayoutFollowSchema:
 
 		return m.generatePerSchema(data)
+	case config.LayoutFollowObject:
+		return m.generatePerObject(data)
 	}
 
 	return nil
@@ -155,24 +156,11 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 
 	for _, o := range objects {
 		if o.HasResolvers() {
-			// A file per field leaves no file for the object's own declarations to follow.
-			objectTmpl := data.Config.Resolver.FilenameTemplate
-			if strings.Contains(objectTmpl, fieldPlaceholder) {
-				objectTmpl = "{object}.go"
-			}
 			fnCase := gqlToResolverName(
 				data.Config.Resolver.Dir(),
 				o.Position.Src.Name,
-				objectTmpl,
-				o.Name,
-				"",
+				data.Config.Resolver.FilenameTemplate,
 			)
-			if data.Config.Resolver.BoilerplateFilename != "" {
-				fnCase = filepath.Join(
-					data.Config.Resolver.Dir(),
-					data.Config.Resolver.BoilerplateFilename,
-				)
-			}
 			fn := strings.ToLower(fnCase)
 			if files[fn] == nil {
 				files[fn] = &File{
@@ -217,23 +205,10 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 				implExists = true
 				resolver.ImplementationRender = rImpl.Implement
 			}
-			// A template naming the object or the field is independent of the schema file the field
-			// is declared in, so a field extended elsewhere still lands in the same place.
-			fieldTmpl := data.Config.Resolver.FilenameTemplate
-			if o.Root && data.Config.Resolver.OperationFilenameTemplate != "" {
-				fieldTmpl = data.Config.Resolver.OperationFilenameTemplate
-			}
-			src := f.Position.Src.Name
-			if strings.Contains(fieldTmpl, objectPlaceholder) ||
-				strings.Contains(fieldTmpl, fieldPlaceholder) {
-				src = o.Position.Src.Name
-			}
 			fnCase := gqlToResolverName(
 				data.Config.Resolver.Dir(),
-				src,
-				fieldTmpl,
-				o.Name,
-				f.Name,
+				f.Position.Src.Name,
+				data.Config.Resolver.FilenameTemplate,
 			)
 			fn := strings.ToLower(fnCase)
 			if files[fn] == nil {
@@ -243,18 +218,12 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 			}
 
 			files[fn].Resolvers = append(files[fn].Resolvers, &resolver)
-			// With {object} in the template an implementation can move here from another file,
-			// so it needs the imports of the file it came from.
-			files[fn].movedImports = append(
-				files[fn].movedImports,
-				rewriter.MethodImports(structName, f.GoFieldName)...,
-			)
 		}
 	}
 
 	var allImports []string
 	for _, file := range files {
-		file.imports = mergeImports(rewriter.ExistingImports(file.name), file.movedImports)
+		file.imports = rewriter.ExistingImports(file.name)
 		file.RemainingSource = rewriter.RemainingSource(file.name)
 
 		for _, i := range file.imports {
@@ -284,14 +253,7 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 		}
 
 		var fileNotice strings.Builder
-		isBoilerplate := data.Config.Resolver.BoilerplateFilename != "" &&
-			file.name == filepath.Join(
-				data.Config.Resolver.Dir(),
-				data.Config.Resolver.BoilerplateFilename,
-			)
-		// The boilerplate file holds no implementations, so it gets the standard generated-file
-		// header above the package line, which tools use to skip it, instead of the notice.
-		if !data.Config.OmitGQLGenFileNotice && !isBoilerplate {
+		if !data.Config.OmitGQLGenFileNotice {
 			fileNotice.WriteString(`
 			// This file will be automatically regenerated based on the schema, any resolver
 			// implementations
@@ -312,8 +274,6 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 			Packages:     data.Config.Packages,
 			Template:     newResolverTemplate,
 			PruneOptions: data.Config.GetPruneOptions(),
-
-			GeneratedHeader: isBoilerplate && !data.Config.OmitGQLGenFileNotice,
 		})
 		if err != nil {
 			return err
@@ -409,21 +369,6 @@ type File struct {
 	RemainingSource string
 }
 
-// mergeImports appends the extra imports that the existing ones don't already have.
-func mergeImports(existing, extra []rewrite.Import) []rewrite.Import {
-	seen := make(map[rewrite.Import]bool, len(existing))
-	for _, i := range existing {
-		seen[i] = true
-	}
-	for _, i := range extra {
-		if !seen[i] {
-			seen[i] = true
-			existing = append(existing, i)
-		}
-	}
-	return existing
-}
-
 func (f *File) Imports() string {
 	for _, imp := range f.imports {
 		if imp.Alias == "" {
@@ -462,55 +407,14 @@ func (r *Resolver) Implementation() string {
 	return r.ImplementationStr
 }
 
-// objectPlaceholder in a filename template is replaced with the snake_case name of the object,
-// putting each object's resolvers in a file of their own.
-const objectPlaceholder = "{object}"
-
-// fieldPlaceholder in a filename template is replaced with the snake_case name of the field,
-// putting each resolver in a file of its own.
-const fieldPlaceholder = "{field}"
-
-func gqlToResolverName(base, gqlname, filenameTmpl, objectName, fieldName string) string {
+func gqlToResolverName(base, gqlname, filenameTmpl string) string {
 	gqlname = filepath.Base(gqlname)
 	ext := filepath.Ext(gqlname)
 	if filenameTmpl == "" {
 		filenameTmpl = "{name}.resolvers.go"
 	}
 	filename := strings.ReplaceAll(filenameTmpl, "{name}", strings.TrimSuffix(gqlname, ext))
-	filename = strings.ReplaceAll(filename, objectPlaceholder, snakeCase(objectName))
-	filename = strings.ReplaceAll(filename, fieldPlaceholder, snakeCase(fieldName))
-	return filepath.Join(base, goSafeFilename(filename))
-}
-
-// goSafeFilename keeps a name built from a field or object name from being skipped or
-// misread by the go tool: files starting with "_" or "." are ignored, and files ending in
-// "_test.go" are only compiled into tests. The schema's "_empty" placeholder field is the
-// common case.
-func goSafeFilename(filename string) string {
-	dir, name := filepath.Split(filename)
-	name = strings.TrimLeft(name, "_.")
-	if strings.HasSuffix(name, "_test.go") {
-		name = strings.TrimSuffix(name, ".go") + "_.go"
-	}
-	return dir + name
-}
-
-// snakeCase turns a GraphQL type name such as "CertificateApplication" or "HTTPLog" into
-// "certificate_application" or "http_log".
-func snakeCase(s string) string {
-	runes := []rune(s)
-	var sb strings.Builder
-	for i, r := range runes {
-		if unicode.IsUpper(r) {
-			if i > 0 && (unicode.IsLower(runes[i-1]) || unicode.IsDigit(runes[i-1]) ||
-				(unicode.IsUpper(runes[i-1]) && i+1 < len(runes) && unicode.IsLower(runes[i+1]))) {
-				sb.WriteByte('_')
-			}
-			r = unicode.ToLower(r)
-		}
-		sb.WriteRune(r)
-	}
-	return sb.String()
+	return filepath.Join(base, filename)
 }
 
 func readResolverTemplate(customResolverTemplate string) string {
