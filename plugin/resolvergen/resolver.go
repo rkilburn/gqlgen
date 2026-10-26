@@ -284,7 +284,14 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 		}
 
 		var fileNotice strings.Builder
-		if !data.Config.OmitGQLGenFileNotice {
+		isBoilerplate := data.Config.Resolver.BoilerplateFilename != "" &&
+			file.name == filepath.Join(
+				data.Config.Resolver.Dir(),
+				data.Config.Resolver.BoilerplateFilename,
+			)
+		// The boilerplate file holds no implementations, so it gets the standard generated-file
+		// header above the package line, which tools use to skip it, instead of the notice.
+		if !data.Config.OmitGQLGenFileNotice && !isBoilerplate {
 			fileNotice.WriteString(`
 			// This file will be automatically regenerated based on the schema, any resolver
 			// implementations
@@ -305,6 +312,8 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 			Packages:     data.Config.Packages,
 			Template:     newResolverTemplate,
 			PruneOptions: data.Config.GetPruneOptions(),
+
+			GeneratedHeader: isBoilerplate && !data.Config.OmitGQLGenFileNotice,
 		})
 		if err != nil {
 			return err
