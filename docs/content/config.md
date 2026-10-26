@@ -61,8 +61,11 @@ resolver:
   # of an object is generated into that object's file, even when it comes from an `extend type`.
   # {field} is the field's name as written in the schema, and puts every resolver in a file of its
   # own: "{field}_{object}.go" gives createOrder_mutation.go and name_customer.go.
-  # With {field}, each object's resolver type and accessor go in object_filename_template
-  # (default "{object}.go").
+  # With {field}, each object's resolver type and accessor go in "{object}.go".
+  # Optional: operation_filename_template names the files for the fields of Query, Mutation and
+  # Subscription instead, so operations get a file each while other objects' fields are grouped:
+  #   operation_filename_template: "{field}_{object}.go"   # createOrder_mutation.go
+  #   filename_template: "{object}_resolver.go"            # order_resolver.go
   filename_template: "{name}.resolvers.go"
 
   # Optional: turn on to not generate template comments above resolvers

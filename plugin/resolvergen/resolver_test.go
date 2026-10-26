@@ -197,6 +197,31 @@ func TestLayoutFollowSchemaWithFieldFilename(t *testing.T) {
 	}
 }
 
+func TestLayoutFollowSchemaWithOperationFilename(t *testing.T) {
+	testFollowSchemaPersistence(t, "testdata/peroperation")
+
+	// Operations get a file each; the fields of other objects stay with their object, however
+	// deeply nested: Query.order -> Order.items -> OrderItem.product -> Product.supplier.
+	for file, wants := range map[string][]string{
+		"customer_query.go":       {") Customer(ctx"},
+		"order_query.go":          {") Order(ctx"},
+		"createOrder_mutation.go": {") CreateOrder(ctx"},
+		"query_resolver.go":       {"type queryCustomResolverType struct", ") Query() QueryResolver"},
+		"mutation_resolver.go":    {"type mutationCustomResolverType struct"},
+		"customer_resolver.go":    {") Name(ctx", ") Orders(ctx", ") Email(ctx", "type customerCustomResolverType struct"},
+		"order_resolver.go":       {") Total(ctx", ") Items(ctx", "type orderCustomResolverType struct"},
+		"order_item_resolver.go":  {") Quantity(ctx", ") Product(ctx", "type orderItemCustomResolverType struct"},
+		"product_resolver.go":     {") Name(ctx", ") Supplier(ctx", "type productCustomResolverType struct"},
+		"supplier_resolver.go":    {") Name(ctx", "type supplierCustomResolverType struct"},
+	} {
+		b, err := os.ReadFile("testdata/peroperation/out/" + file)
+		require.NoError(t, err, file)
+		for _, want := range wants {
+			require.Contains(t, string(b), want, file)
+		}
+	}
+}
+
 func TestLayoutFollowSchemaWithObjectFilenameMovesImports(t *testing.T) {
 	const dir = "testdata/perobject_move/out/"
 	// Start from the layout before {object} was used: the implementation lives in another

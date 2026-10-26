@@ -1,0 +1,36 @@
+type Query {
+    customer: Customer!
+    order: Order!
+}
+
+type Mutation {
+    createOrder: Order!
+}
+
+type Customer {
+    name: String!
+    orders: [Order!]!
+}
+
+type Order {
+    total: Int!
+    items: [OrderItem!]!
+}
+
+type OrderItem {
+    quantity: Int!
+    product: Product!
+}
+
+type Product {
+    name: String!
+    supplier: Supplier!
+}
+
+type Supplier {
+    name: String!
+}
+
+extend type Customer {
+    email: String!
+}

@@ -155,13 +155,10 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 
 	for _, o := range objects {
 		if o.HasResolvers() {
-			// With a file per field, the object's own declarations need a file too.
+			// A file per field leaves no file for the object's own declarations to follow.
 			objectTmpl := data.Config.Resolver.FilenameTemplate
 			if strings.Contains(objectTmpl, fieldPlaceholder) {
-				objectTmpl = data.Config.Resolver.ObjectFilenameTemplate
-				if objectTmpl == "" {
-					objectTmpl = "{object}.go"
-				}
+				objectTmpl = "{object}.go"
 			}
 			fnCase := gqlToResolverName(
 				data.Config.Resolver.Dir(),
@@ -216,15 +213,19 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 			}
 			// A template naming the object or the field is independent of the schema file the field
 			// is declared in, so a field extended elsewhere still lands in the same place.
+			fieldTmpl := data.Config.Resolver.FilenameTemplate
+			if o.Root && data.Config.Resolver.OperationFilenameTemplate != "" {
+				fieldTmpl = data.Config.Resolver.OperationFilenameTemplate
+			}
 			src := f.Position.Src.Name
-			if strings.Contains(data.Config.Resolver.FilenameTemplate, objectPlaceholder) ||
-				strings.Contains(data.Config.Resolver.FilenameTemplate, fieldPlaceholder) {
+			if strings.Contains(fieldTmpl, objectPlaceholder) ||
+				strings.Contains(fieldTmpl, fieldPlaceholder) {
 				src = o.Position.Src.Name
 			}
 			fnCase := gqlToResolverName(
 				data.Config.Resolver.Dir(),
 				src,
-				data.Config.Resolver.FilenameTemplate,
+				fieldTmpl,
 				o.Name,
 				f.Name,
 			)
