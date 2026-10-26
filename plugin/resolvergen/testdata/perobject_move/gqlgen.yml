@@ -1,0 +1,14 @@
+schema:
+  - "testdata/perobject_move/schema.graphql"
+
+exec:
+  filename: testdata/perobject_move/out/ignored.go
+model:
+  filename: testdata/perobject_move/out/generated.go
+resolver:
+  type: CustomResolverType
+  layout: follow-schema
+  dir: testdata/perobject_move/out
+  filename_template: "{object}.go"
+
+omit_gqlgen_version_in_file_notice: true

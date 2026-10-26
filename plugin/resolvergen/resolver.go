@@ -225,12 +225,18 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 			}
 
 			files[fn].Resolvers = append(files[fn].Resolvers, &resolver)
+			// With {object} in the template an implementation can move here from another file,
+			// so it needs the imports of the file it came from.
+			files[fn].movedImports = append(
+				files[fn].movedImports,
+				rewriter.MethodImports(structName, f.GoFieldName)...,
+			)
 		}
 	}
 
 	var allImports []string
 	for _, file := range files {
-		file.imports = rewriter.ExistingImports(file.name)
+		file.imports = mergeImports(rewriter.ExistingImports(file.name), file.movedImports)
 		file.RemainingSource = rewriter.RemainingSource(file.name)
 
 		for _, i := range file.imports {
@@ -372,7 +378,23 @@ type File struct {
 	Objects         []*codegen.Object
 	Resolvers       []*Resolver
 	imports         []rewrite.Import
+	movedImports    []rewrite.Import
 	RemainingSource string
+}
+
+// mergeImports appends the extra imports that the existing ones don't already have.
+func mergeImports(existing, extra []rewrite.Import) []rewrite.Import {
+	seen := make(map[rewrite.Import]bool, len(existing))
+	for _, i := range existing {
+		seen[i] = true
+	}
+	for _, i := range extra {
+		if !seen[i] {
+			seen[i] = true
+			existing = append(existing, i)
+		}
+	}
+	return existing
 }
 
 func (f *File) Imports() string {

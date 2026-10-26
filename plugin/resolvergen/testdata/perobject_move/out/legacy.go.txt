@@ -1,0 +1,11 @@
+package customresolver
+
+import (
+	"context"
+	"strings"
+)
+
+// Greeting is the resolver for the greeting field.
+func (r *queryCustomResolverType) Greeting(ctx context.Context) (string, error) {
+	return strings.ToUpper("hello"), nil
+}

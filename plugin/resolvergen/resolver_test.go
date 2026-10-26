@@ -170,6 +170,30 @@ func TestLayoutFollowSchemaWithObjectFilename(t *testing.T) {
 	require.NoFileExists(t, "testdata/perobject/out/schema.go")
 }
 
+func TestLayoutFollowSchemaWithObjectFilenameMovesImports(t *testing.T) {
+	const dir = "testdata/perobject_move/out/"
+	// Start from the layout before {object} was used: the implementation lives in another
+	// file, which is the only place that imports strings.
+	_ = syscall.Unlink(dir + "query.go")
+	overWriteFile(t, dir+"legacy.go.txt", dir+"legacy.go")
+
+	cfg, err := config.LoadConfig("testdata/perobject_move/gqlgen.yml")
+	require.NoError(t, err)
+	require.NoError(t, cfg.Init())
+	data, err := codegen.BuildData(cfg)
+	require.NoError(t, err)
+	require.NoError(t, (&Plugin{}).GenerateCode(data))
+
+	b, err := os.ReadFile(dir + "query.go")
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"strings"`)
+	require.Contains(t, string(b), `strings.ToUpper("hello")`)
+
+	// The old file is now redundant; once it is gone the package must compile.
+	require.NoError(t, syscall.Unlink(dir+"legacy.go"))
+	assertNoErrors(t, "github.com/99designs/gqlgen/plugin/resolvergen/testdata/perobject_move/out")
+}
+
 func TestGqlToResolverName(t *testing.T) {
 	tests := map[string]struct {
 		tmpl, object, want string
