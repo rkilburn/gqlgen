@@ -464,7 +464,20 @@ func gqlToResolverName(base, gqlname, filenameTmpl, objectName, fieldName string
 	filename := strings.ReplaceAll(filenameTmpl, "{name}", strings.TrimSuffix(gqlname, ext))
 	filename = strings.ReplaceAll(filename, objectPlaceholder, snakeCase(objectName))
 	filename = strings.ReplaceAll(filename, fieldPlaceholder, fieldName)
-	return filepath.Join(base, filename)
+	return filepath.Join(base, goSafeFilename(filename))
+}
+
+// goSafeFilename keeps a name built from a field or object name from being skipped or
+// misread by the go tool: files starting with "_" or "." are ignored, and files ending in
+// "_test.go" are only compiled into tests. The schema's "_empty" placeholder field is the
+// common case.
+func goSafeFilename(filename string) string {
+	dir, name := filepath.Split(filename)
+	name = strings.TrimLeft(name, "_.")
+	if strings.HasSuffix(name, "_test.go") {
+		name = strings.TrimSuffix(name, ".go") + "_.go"
+	}
+	return dir + name
 }
 
 // snakeCase turns a GraphQL type name such as "CertificateApplication" or "HTTPLog" into

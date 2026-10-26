@@ -256,6 +256,8 @@ func TestGqlToResolverName(t *testing.T) {
 		"acronym stays together":                   {"{object}.go", "HTTPLog", "", "out/http_log.go"},
 		"digits":                                   {"{object}.go", "OAuth2Client", "", "out/o_auth2_client.go"},
 		"both placeholders":                        {"{name}_{object}.go", "Query", "", "out/schema_query.go"},
+		"leading underscore is dropped":            {"{field}_{object}.go", "Query", "_empty", "out/empty_query.go"},
+		"test suffix is avoided":                   {"{field}_{object}.go", "Test", "run", "out/run_test_.go"},
 		"field and object":                         {"{field}_{object}.go", "Mutation", "createOrder", "out/createOrder_mutation.go"},
 	}
 	for name, tt := range tests {
