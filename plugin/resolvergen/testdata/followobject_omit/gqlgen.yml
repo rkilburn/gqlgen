@@ -1,0 +1,20 @@
+schema:
+  - "testdata/followobject_omit/schema.graphql"
+
+exec:
+  filename: testdata/followobject_omit/out/ignored.go
+model:
+  filename: testdata/followobject_omit/out/generated.go
+resolver:
+  type: CustomResolverType
+  layout: follow-object
+  dir: testdata/followobject_omit/out
+
+models:
+  Customer:
+    model: github.com/99designs/gqlgen/plugin/resolvergen/testdata/followobject_omit/out.Customer
+    fields:
+      name:
+        resolver: true
+
+omit_gqlgen_file_notice: true

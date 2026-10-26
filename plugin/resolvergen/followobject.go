@@ -145,13 +145,13 @@ func (m *Plugin) generatePerObject(data *codegen.Data) error {
 		}
 
 		err := templates.Render(templates.Options{
-			PackageName:     cfg.Package,
-			FileNotice:      fileNotice.String(),
-			Filename:        file.name,
-			Data:            resolverBuild,
-			Packages:        data.Config.Packages,
-			Template:        newResolverTemplate,
-			PruneOptions:    data.Config.GetPruneOptions(),
+			PackageName:  cfg.Package,
+			FileNotice:   fileNotice.String(),
+			Filename:     file.name,
+			Data:         resolverBuild,
+			Packages:     data.Config.Packages,
+			Template:     newResolverTemplate,
+			PruneOptions: data.Config.GetPruneOptions(),
 			// omit_gqlgen_file_notice is for resolver files people edit; this one is always generated.
 			GeneratedHeader: isTypes,
 		})
