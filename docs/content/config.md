@@ -59,6 +59,10 @@ resolver:
   # {name} is the schema file's base name. {object} is the snake_case name of the GraphQL object,
   # e.g. "{object}.go" gives query.go and certificate_application.go. With {object}, every field
   # of an object is generated into that object's file, even when it comes from an `extend type`.
+  # {field} is the field's name as written in the schema, and puts every resolver in a file of its
+  # own: "{field}_{object}.go" gives createOrder_mutation.go and name_customer.go.
+  # With {field}, each object's resolver type and accessor go in object_filename_template
+  # (default "{object}.go").
   filename_template: "{name}.resolvers.go"
 
   # Optional: turn on to not generate template comments above resolvers

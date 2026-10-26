@@ -1,0 +1,17 @@
+type Query {
+    customer: Customer!
+    order: Order!
+}
+
+type Customer {
+    name: String!
+    orders: [Order!]!
+}
+
+type Order {
+    total: Int!
+}
+
+extend type Customer {
+    email: String!
+}

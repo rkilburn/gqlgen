@@ -155,11 +155,20 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 
 	for _, o := range objects {
 		if o.HasResolvers() {
+			// With a file per field, the object's own declarations need a file too.
+			objectTmpl := data.Config.Resolver.FilenameTemplate
+			if strings.Contains(objectTmpl, fieldPlaceholder) {
+				objectTmpl = data.Config.Resolver.ObjectFilenameTemplate
+				if objectTmpl == "" {
+					objectTmpl = "{object}.go"
+				}
+			}
 			fnCase := gqlToResolverName(
 				data.Config.Resolver.Dir(),
 				o.Position.Src.Name,
-				data.Config.Resolver.FilenameTemplate,
+				objectTmpl,
 				o.Name,
+				"",
 			)
 			fn := strings.ToLower(fnCase)
 			if files[fn] == nil {
@@ -205,10 +214,11 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 				implExists = true
 				resolver.ImplementationRender = rImpl.Implement
 			}
-			// A template naming the object keeps every field of an object in the
-			// file for that object, even when the field is extended in another schema file.
+			// A template naming the object or the field is independent of the schema file the field
+			// is declared in, so a field extended elsewhere still lands in the same place.
 			src := f.Position.Src.Name
-			if strings.Contains(data.Config.Resolver.FilenameTemplate, objectPlaceholder) {
+			if strings.Contains(data.Config.Resolver.FilenameTemplate, objectPlaceholder) ||
+				strings.Contains(data.Config.Resolver.FilenameTemplate, fieldPlaceholder) {
 				src = o.Position.Src.Name
 			}
 			fnCase := gqlToResolverName(
@@ -216,6 +226,7 @@ func (m *Plugin) generatePerSchema(data *codegen.Data) error {
 				src,
 				data.Config.Resolver.FilenameTemplate,
 				o.Name,
+				f.Name,
 			)
 			fn := strings.ToLower(fnCase)
 			if files[fn] == nil {
@@ -439,7 +450,11 @@ func (r *Resolver) Implementation() string {
 // putting each object's resolvers in a file of their own.
 const objectPlaceholder = "{object}"
 
-func gqlToResolverName(base, gqlname, filenameTmpl, objectName string) string {
+// fieldPlaceholder in a filename template is replaced with the field's name as written in the
+// schema, putting each resolver in a file of its own.
+const fieldPlaceholder = "{field}"
+
+func gqlToResolverName(base, gqlname, filenameTmpl, objectName, fieldName string) string {
 	gqlname = filepath.Base(gqlname)
 	ext := filepath.Ext(gqlname)
 	if filenameTmpl == "" {
@@ -447,6 +462,7 @@ func gqlToResolverName(base, gqlname, filenameTmpl, objectName string) string {
 	}
 	filename := strings.ReplaceAll(filenameTmpl, "{name}", strings.TrimSuffix(gqlname, ext))
 	filename = strings.ReplaceAll(filename, objectPlaceholder, snakeCase(objectName))
+	filename = strings.ReplaceAll(filename, fieldPlaceholder, fieldName)
 	return filepath.Join(base, filename)
 }
 

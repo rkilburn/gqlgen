@@ -170,6 +170,33 @@ func TestLayoutFollowSchemaWithObjectFilename(t *testing.T) {
 	require.NoFileExists(t, "testdata/perobject/out/schema.go")
 }
 
+func TestLayoutFollowSchemaWithFieldFilename(t *testing.T) {
+	testFollowSchemaPersistence(t, "testdata/perfield")
+
+	// One file per resolver, plus a file per object for its type and accessor.
+	for file, wants := range map[string][]string{
+		"customer_query.go":  {") Customer(ctx"},
+		"order_query.go":     {") Order(ctx"},
+		"name_customer.go":   {") Name(ctx"},
+		"orders_customer.go": {") Orders(ctx"},
+		"email_customer.go":  {") Email(ctx"},
+		"total_order.go":     {") Total(ctx"},
+		"query.go":           {"type queryCustomResolverType struct", ") Query() QueryResolver"},
+		"customer.go":        {"type customerCustomResolverType struct"},
+		"order.go":           {"type orderCustomResolverType struct"},
+	} {
+		b, err := os.ReadFile("testdata/perfield/out/" + file)
+		require.NoError(t, err, file)
+		for _, want := range wants {
+			require.Contains(t, string(b), want, file)
+		}
+		if strings.HasSuffix(file, "_query.go") || strings.Contains(file, "_customer.go") ||
+			strings.HasSuffix(file, "_order.go") {
+			require.NotContains(t, string(b), "type ", file)
+		}
+	}
+}
+
 func TestLayoutFollowSchemaWithObjectFilenameMovesImports(t *testing.T) {
 	const dir = "testdata/perobject_move/out/"
 	// Start from the layout before {object} was used: the implementation lives in another
@@ -196,18 +223,19 @@ func TestLayoutFollowSchemaWithObjectFilenameMovesImports(t *testing.T) {
 
 func TestGqlToResolverName(t *testing.T) {
 	tests := map[string]struct {
-		tmpl, object, want string
+		tmpl, object, field, want string
 	}{
-		"default template follows the schema file": {"", "Query", "out/schema.resolvers.go"},
-		"name placeholder":                         {"{name}.custom.go", "Query", "out/schema.custom.go"},
-		"object placeholder":                       {"{object}.go", "CertificateApplication", "out/certificate_application.go"},
-		"acronym stays together":                   {"{object}.go", "HTTPLog", "out/http_log.go"},
-		"digits":                                   {"{object}.go", "OAuth2Client", "out/o_auth2_client.go"},
-		"both placeholders":                        {"{name}_{object}.go", "Query", "out/schema_query.go"},
+		"default template follows the schema file": {"", "Query", "", "out/schema.resolvers.go"},
+		"name placeholder":                         {"{name}.custom.go", "Query", "", "out/schema.custom.go"},
+		"object placeholder":                       {"{object}.go", "CertificateApplication", "", "out/certificate_application.go"},
+		"acronym stays together":                   {"{object}.go", "HTTPLog", "", "out/http_log.go"},
+		"digits":                                   {"{object}.go", "OAuth2Client", "", "out/o_auth2_client.go"},
+		"both placeholders":                        {"{name}_{object}.go", "Query", "", "out/schema_query.go"},
+		"field and object":                         {"{field}_{object}.go", "Mutation", "createOrder", "out/createOrder_mutation.go"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tt.want, gqlToResolverName("out", "path/to/schema.graphql", tt.tmpl, tt.object))
+			require.Equal(t, tt.want, gqlToResolverName("out", "path/to/schema.graphql", tt.tmpl, tt.object, tt.field))
 		})
 	}
 }
