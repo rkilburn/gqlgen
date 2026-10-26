@@ -152,7 +152,8 @@ func (m *Plugin) generatePerObject(data *codegen.Data) error {
 			Packages:        data.Config.Packages,
 			Template:        newResolverTemplate,
 			PruneOptions:    data.Config.GetPruneOptions(),
-			GeneratedHeader: isTypes && !data.Config.OmitGQLGenFileNotice,
+			// omit_gqlgen_file_notice is for resolver files people edit; this one is always generated.
+			GeneratedHeader: isTypes,
 		})
 		if err != nil {
 			return err
